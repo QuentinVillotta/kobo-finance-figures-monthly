@@ -6,6 +6,10 @@ The `kobo-finance-figures-monthly` project automates the processing of Kobo data
 ## Prerequisites
 To run this project, you will need:
 - Python 3.x installed on your machine.
+- Quarto installed on your system. You can download it from [Quarto's official website](https://quarto.org/). To verify your installation, run:
+  ```
+  quarto check
+  ```
 - The following Python packages:
   - pandas
   - numpy
@@ -47,11 +51,15 @@ python main.py --month <MM> --year <YYYY>
 ```
 Replace `<MM>` with the billing month (e.g., 04 for April) and `<YYYY>` with the billing year (e.g., 2025).
 
+
 ## Output
 The script generates:
 - Visualizations (e.g., total submissions, percentage usage, number of projects).
 - An Excel file with billing details.
-- A ZIP archive containing all outputs.
+- A Quarto HTML report summarizing the results.
+- A ZIP archive containing all outputs, including the Quarto report.
+
+
 
 ## Contribution
 Contributions to the project are welcome. Please fork the repository and submit a pull request with your changes. Ensure that you include tests for any new functionality added.
