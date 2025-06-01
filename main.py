@@ -1,10 +1,13 @@
 import os
+import sys
 import pandas as pd
 import logging
 from utils.kobo_api import fetch_kobo_data
-from utils.config_utils import load_api_config, load_api_token, save_to_excel, create_billing_month_folder
+from utils.config_utils import load_api_config, load_api_token, create_billing_month_folder
 from utils.plot_utils import plot_total_submissions, plot_percentage_usage, plot_number_of_projects
 from utils.zip_utils import create_zip_archive
+import datetime
+import argparse
 
 # Configure logging
 logging.basicConfig(
@@ -99,5 +102,21 @@ def process_kobo_data(month, year, config_path="config/config.yaml", credentials
     logging.info(f"ZIP archive created successfully: {zip_filename}")
 
 if __name__ == "__main__":
-    # Example usage
-    process_kobo_data("04", "2025")
+    # Parse command-line arguments for month and year
+    parser = argparse.ArgumentParser(description="Run Kobo data processing pipeline.")
+    parser.add_argument("--month", type=str, required=True, help="The billing month (e.g., 04 for April). This argument is required.")
+    parser.add_argument("--year", type=str, required=True, help="The billing year (e.g., 2025). This argument is required.")
+    args = parser.parse_args()
+
+    month = args.month
+    year = args.year
+
+    # Validate month and year inputs
+    if not (month.isdigit() and 1 <= int(month) <= 12):
+        parser.error(f"Invalid month '{month}'. Please provide a valid month (01-12).")
+
+    if not (year.isdigit() and len(year) == 4):
+        parser.error(f"Invalid year '{year}'. Please provide a valid year (e.g., 2025).")
+
+    # Run the processing function
+    process_kobo_data(month, year)
