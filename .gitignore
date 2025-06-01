@@ -10,12 +10,9 @@ venv/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Data and output folders
-data/
-output/
-
-# test files
+# test & dev files
 tests/
+dev/
 
 # System files
 .DS_Store

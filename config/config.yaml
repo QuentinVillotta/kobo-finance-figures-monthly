@@ -3,3 +3,11 @@ kobo:
   server: "https://kobo.impact-initiatives.org"
   api_version: "v2"
   project_view_id: "pvJSw9SZV6GHibC8VBXXL87"
+
+# Masks for filtering data
+country_mask: ["ALB", "DZA", "ALA", "BEL", "CHE", "PRK"]
+account_mask: ["reach_global", "james", "raed_reach_jo", "jnm"]
+ncount_mask: 15
+
+# Export
+output_path: "output"

@@ -1,77 +1,103 @@
 import os
-import requests
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import yaml
-import json
-from datetime import datetime
+import logging
 from utils.kobo_api import fetch_kobo_data
+from utils.config_utils import load_api_config, load_api_token, save_to_excel, create_billing_month_folder
+from utils.plot_utils import plot_total_submissions, plot_percentage_usage, plot_number_of_projects
+from utils.zip_utils import create_zip_archive
 
-# Load API configuration from a YAML file
-def load_api_config(config_path="config/config.yaml"):
-    with open(config_path, "r") as file:
-        return yaml.safe_load(file)
-
-# Load API token from a JSON file
-def load_api_token(credentials_path="credentials/api_token.json"):
-    with open(credentials_path, "r") as file:
-        return json.load(file)["token"]
-
-# Create output folder
-def create_folder(dir_name):
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("process_kobo_data.log"),
+        logging.StreamHandler()
+    ]
+)
 
 # Main processing function
 def process_kobo_data(month, year, config_path="config/config.yaml", credentials_path="credentials/api_token.json"):
+    logging.info("Starting Kobo data processing...")
+
+    # Configure paths and load configurations
+    logging.info("Loading configuration and credentials...")
     config = load_api_config(config_path)
     api_token = load_api_token(credentials_path)
     project_view_id = config["kobo"]["project_view_id"]
     kobo_server = config["kobo"]["server"]
+    base_output_path = config["output_path"]
+
+    # Output folder for the billing month
+    billing_month = f"{month.zfill(2)}_{year}"
+    save_path = create_billing_month_folder(base_output_path, billing_month)
+    logging.info(f"Output folder created: {save_path}")
+
+    # Load masks from configuration
+    logging.info("Loading masks from configuration...")
+    country_mask = config.get("country_mask")
+    account_mask = config.get("account_mask")
+    ncount_mask = config.get("ncount_mask")
 
     # Fetch data from Kobo API
+    logging.info("Fetching data from Kobo API...")
     df = fetch_kobo_data(api_token, project_view_id, kobo_server)
+    logging.info(f"Data fetched successfully with {len(df)} records.")
 
-    # Filter and process data
-    billing_month = f"{month[:3]}_{year}"
-    df["billing_date"] = pd.to_datetime(df["deployed_date"]).dt.strftime('%b_%Y')
+    # Create billing date
+    logging.info("Filtering data for the specified billing month...")
+    df["billing_date"] = pd.to_datetime(df["date_deployed"]).dt.strftime('%m_%Y')
     df_filtered = df[df["billing_date"] == billing_month]
 
-    # Create output folder
-    save_path = os.path.join("output", billing_month)
-    create_folder(save_path)
+    # Apply filters
+    logging.info("Applying filters...")
+    df_filtered = df_filtered[~df_filtered["owner__username"].isin(account_mask)]
+    df_filtered = df_filtered[df_filtered["submission_count"] > ncount_mask]
+    country_condition = ~df_filtered["country"].isin(country_mask)
+    not_na_condition = df_filtered["country"].notna()
+    not_empty_condition = df_filtered["country"] != ''
+    df_filtered = df_filtered[country_condition & not_na_condition & not_empty_condition]
+    logging.info(f"Data filtered successfully with {len(df_filtered)} records remaining.")
+
+    # Save filtered data to CSV
+    # logging.info("Saving filtered data to CSV...")
+    # df_filtered.to_csv(os.path.join(save_path, "kobo_metadata.csv"), index=False)
 
     # Generate and save plots
-    generate_plots(df_filtered, save_path, billing_month)
+    logging.info("Generating and saving plots...")
+    plot_total_submissions(df_filtered, save_path, billing_month)
+    plot_percentage_usage(df_filtered, save_path, billing_month)
+    plot_number_of_projects(df_filtered, save_path, billing_month)
+    logging.info("Plots generated successfully.")
 
-    # Save final data to Excel
-    save_to_excel(df_filtered, save_path, billing_month)
-
-# Generate plots
-def generate_plots(df, save_path, billing_month):
-    palette_mask = plt.cm.tab20b(np.arange(len(df["country"].unique())))
-
-    # Total submissions
-    submission_ = df.groupby("country")["submission_count"].sum().sort_index()
-    submission_.plot(kind="bar", ylabel="#Submission (log scale)", title=billing_month,
-                     ylim=[1, max(submission_) * 10], log=True, color=palette_mask)
-    plt.savefig(os.path.join(save_path, f"total_usage_{billing_month}.png"))
-    plt.clf()
-
-    # Percentage usage
+    # Calculate additional metrics for the final output
+    logging.info("Calculating additional metrics...")
+    n_projects = df_filtered["country"].value_counts()
+    submission_ = df_filtered.groupby("country")["submission_count"].sum().sort_index()
     submission_n = submission_ / submission_.sum() * 100
-    ax = submission_n.plot(kind="bar", ylabel="Usage [%]", title=billing_month,
-                            ylim=[0, max(submission_n) + 5], color=palette_mask)
-    for p in ax.patches:
-        ax.annotate(str(round(p.get_height(), 2)), (p.get_x(), p.get_height() * 1.03), fontsize="xx-large")
-    plt.savefig(os.path.join(save_path, f"percentage_usage_{billing_month}.png"))
-    plt.clf()
 
-# Save data to Excel
-def save_to_excel(df, save_path, billing_month):
-    df.to_excel(os.path.join(save_path, f"billing_details_{billing_month}.xlsx"), index=False)
+    # Combine metrics into a single DataFrame with explicit column names
+    df_final = pd.concat(
+        [
+            n_projects.rename("country_count"),
+            submission_.rename("submission_count"),
+            round(submission_n, 2).rename("submission_count_perc")
+        ],
+        axis=1
+    )
+    # Ensure column names are unique and meaningful
+    df_final.reset_index(inplace=True)
+    df_final.rename(columns={"index": "country"}, inplace=True)
+
+    # Save the final DataFrame to an Excel file
+    logging.info("Saving the final DataFrame to an Excel file...")
+    df_final.to_excel(os.path.join(save_path, f"billing_details_{billing_month}.xlsx"))
+    logging.info("Kobo data processing completed successfully.")
+
+    # Create a ZIP archive with the final dataset and plots
+    zip_filename = create_zip_archive(save_path, billing_month)
+    logging.info(f"ZIP archive created successfully: {zip_filename}")
 
 if __name__ == "__main__":
     # Example usage
-    process_kobo_data("Apr", "2025")
+    process_kobo_data("04", "2025")
