@@ -1,0 +1,5 @@
+# Configuration file for Kobo Codebook Generator
+kobo:
+  server: "https://kobo.impact-initiatives.org"
+  api_version: "v2"
+  project_view_id: "pvJSw9SZV6GHibC8VBXXL87"
