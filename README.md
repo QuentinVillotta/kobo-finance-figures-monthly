@@ -1,4 +1,4 @@
-# kobo_split_automation
+# kobo-finance-figures-monthly
 
 ## Project Description
 The `kobo-finance-figures-monthly` project automates the processing of Kobo data files to generate billing details. It fetches data from the Kobo API, applies filters, generates visualizations, and outputs structured results in Excel and ZIP formats. This automation streamlines data handling, making it efficient and reliable.
@@ -20,7 +20,27 @@ pip install -r requirements.txt
 ```
 
 ## Launch Instructions
-1. Ensure your configuration files (`config/config.yaml` and `credentials/api_token.json`) are correctly set up.
+1. Ensure your configuration files are correctly set up:
+   - **`config/config.yaml`**: This file should contain the following structure:
+     ```yaml
+     kobo:
+       project_view_id: <your_project_view_id>
+       server: <your_kobo_server_url>
+     output_path: <path_to_output_directory>
+     country_mask: [<list_of_countries_to_exclude>]
+     account_mask: [<list_of_accounts_to_exclude>]
+     ncount_mask: <minimum_submission_count>
+     ```
+     Replace placeholders with your actual configuration values.
+
+   - **`credentials/api_token.json`**: This file must be located in the `credentials/` directory and should contain your API token in the following format:
+     ```json
+     {
+       "api_token": "<your_api_token>"
+     }
+     ```
+     Replace `<your_api_token>` with your actual Kobo API token. Ensure the file is named `api_token.json` and is in the correct directory, as the script depends on this for successful execution.
+
 2. Run the script using the following command:
 ```
 python main.py --month <MM> --year <YYYY>
