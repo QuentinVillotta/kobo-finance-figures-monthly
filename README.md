@@ -40,7 +40,7 @@ pip install -r requirements.txt
    - **`credentials/api_token.json`**: This file must be located in the `credentials/` directory and should contain your API token in the following format:
      ```json
      {
-       "api_token": "<your_api_token>"
+       "token": "<your_api_token>"
      }
      ```
      Replace `<your_api_token>` with your actual Kobo API token. Ensure the file is named `api_token.json` and is in the correct directory, as the script depends on this for successful execution.
