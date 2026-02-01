@@ -6,7 +6,7 @@ kobo:
 
 # Masks for filtering data
 country_mask: ["ALB", "DZA", "ALA", "BEL", "CHE", "PRK"]
-account_mask: ["reach_global", "james", "raed_reach_jo", "jnm"]
+account_mask: ["reach_global", "james", "raed_reach_jo", "jnm", "data_test_account", "iyedghedamsi", "quentin_villotta"]
 ncount_mask: 15
 
 # Export
